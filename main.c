@@ -4,22 +4,46 @@
 #include <assert.h>
 #include <SDL2/SDL.h>
 
-#define WIDTH 800
-#define HEIGHT 600
+#define SCREEN_WIDTH 800
+#define SCREEN_HEIGHT 600
+#define ASPECT_RATIO 0.66
 
-struct vector2_f { float x, y; };
+#define MAP_WIDTH 8
+#define MAP_HEIGHT 8
+
+struct vector2f_t { float x, y; };
+struct vector2i_t { int32_t x, y; };
+
+static inline float dot(const struct vector2f_t v, const struct vector2f_t u)
+{
+    return (v.x * u.x) + (v.y * u.y);
+}
+
+static inline float len(const struct vector2f_t v)
+{
+    return sqrtf(dot(v, v));
+}
+
+static inline struct vector2f_t norm(const struct vector2f_t v)
+{
+    struct vector2f_t u;
+    float l = len(v);
+    u.x = v.x / l;
+    u.y = v.y / l;
+    return u;
+}
 
 struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Texture *texture;
-    uint32_t pixels[WIDTH * HEIGHT];
+    uint32_t pixels[SCREEN_WIDTH * SCREEN_HEIGHT];
     bool quit;
 
-    struct vector2_f pos, dir;
+    struct vector2f_t pos, dir;
 } context;
 
-static uint8_t map_data[8 * 8] = {
+const static uint8_t MAP[MAP_WIDTH * MAP_HEIGHT] = {
     1, 1, 1, 1, 1, 1, 1, 1,
     1, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 1,
@@ -30,21 +54,38 @@ static uint8_t map_data[8 * 8] = {
     1, 1, 1, 1, 1, 1, 1, 1,
 };
 
-static inline float dot(const struct vector2_f v, const struct vector2_f u)
+void render()
 {
-    return (v.x * u.x) + (v.y * u.y);
-}
+    for (uint32_t x = 0; x < SCREEN_WIDTH; ++x) {
+        // ray position
+        const struct vector2f_t ray_pos = {
+            context.pos.x, context.pos.y
+        };
 
-static inline float len(const struct vector2_f v)
-{
-    return sqrtf(dot(v, v));
-}
+        // ray direction
+        float correction = ASPECT_RATIO * (-1 + 2 * x / (float)SCREEN_WIDTH);
+        const struct vector2f_t ray_dir = {
+            context.dir.x,
+            context.dir.y + correction
+        };
 
-static inline void norm(struct vector2_f *v)
-{
-    float l = len(*v);
-    v->x /= l;
-    v->y /= l;
+        // integer position in map
+        const struct vector2i_t ray_posi = { (int32_t) ray_pos.x, (int32_t) ray_pos.y };
+
+        // length of ray cast
+        const struct vector2f_t delta_dist = {
+            fabsf(1.0f / ray_dir.x),
+            fabsf(1.0f / ray_dir.y)
+        };
+
+        // length of ray from current pos to first x/y side
+        struct vector2f_t side_dist = {
+            delta_dist.x * (ray_dir.x < 0 ? (ray_pos.x - ray_posi.x) : (ray_posi.x + 1.0f - ray_pos.x)),
+            delta_dist.y * (ray_dir.y < 0 ? (ray_pos.y - ray_posi.y) : (ray_posi.y + 1.0f - ray_pos.y))
+        };
+
+        // TODO: step direction, DDA, etc.
+    }
 }
 
 int main()
@@ -54,7 +95,7 @@ int main()
     context.window = SDL_CreateWindow("BSP Demo",
             SDL_WINDOWPOS_CENTERED,
             SDL_WINDOWPOS_CENTERED,
-            WIDTH, HEIGHT,
+            SCREEN_WIDTH, SCREEN_HEIGHT,
             SDL_WINDOW_SHOWN);
 
     assert(context.window);
@@ -66,10 +107,10 @@ int main()
     context.texture = SDL_CreateTexture(context.renderer,
             SDL_PIXELFORMAT_RGBA8888,
             SDL_TEXTUREACCESS_STREAMING,
-            WIDTH, HEIGHT);
+            SCREEN_WIDTH, SCREEN_HEIGHT);
     
-    context.pos = (struct vector2_f) {4, 4};
-    context.dir = (struct vector2_f) {0, 0};
+    context.pos = (struct vector2f_t) { 4.0f, 4.0f };
+    context.dir = norm((struct vector2f_t) { 1.0f, 1.0f });
 
     while (!context.quit) {
         SDL_Event ev;
@@ -81,7 +122,9 @@ int main()
             }
         }
 
-        SDL_UpdateTexture(context.texture, NULL, context.pixels, WIDTH * 4); // 4 == sizeof(uint32_t)
+        render();
+
+        SDL_UpdateTexture(context.texture, NULL, context.pixels, SCREEN_WIDTH * 4); // 4 == sizeof(uint32_t)
         SDL_RenderCopy(context.renderer, context.texture, NULL, NULL);
         SDL_RenderPresent(context.renderer);
     }
