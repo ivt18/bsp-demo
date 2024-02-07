@@ -1,6 +1,6 @@
 build: main.c
 	mkdir -p build
-	cc main.c -g -pedantic -o build/main.o -lSDL2
+	cc main.c -g -pedantic -o build/main.o -lm -lSDL2 
 
 clean:
-	rm -f build/main.o
+	rm -rf build
