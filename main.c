@@ -157,14 +157,14 @@ void render()
         }
 
         // darken walls depending on perspective
-        /* if (hit.side == 1) {
+        if (hit.side == 1) {
             const uint32_t
                 r = ((color & 0xFF000000) * COLOR_DARKER_FACTOR),
                 g = ((color & 0x00FF0000) * COLOR_DARKER_FACTOR),
                 b = ((color & 0x0000FF00) * COLOR_DARKER_FACTOR);
 
             color = 0x000000FF | (r & 0xFF000000) | (g & 0x00FF0000) | (b & 0x0000FF00);
-        } */
+        }
 
         hit.pos = (struct vector2f_t) { ray_pos.x + side_dist.x, ray_pos.y + side_dist.y };
 
@@ -189,20 +189,20 @@ static void rotate(const float deg)
 {
     const struct vector2f_t p = context.plane, d = context.dir;
     context.dir.x = d.x * cos(deg) - d.y * sin(deg);
-    context.dir.y = d.x * sin(deg) - d.y * cos(deg);
+    context.dir.y = d.x * sin(deg) + d.y * cos(deg);
     context.plane.x = p.x * cos(deg) - p.y * sin(deg);
     context.plane.y = p.x * sin(deg) + p.y * cos(deg);
 }
 
 int main()
 {
-    assert(SDL_Init(SDL_INIT_EVERYTHING) == 0);
+    assert(SDL_Init(SDL_INIT_VIDEO) == 0);
 
     context.window = SDL_CreateWindow("BSP Demo",
             SDL_WINDOWPOS_CENTERED,
             SDL_WINDOWPOS_CENTERED,
             WINDOW_WIDTH, WINDOW_HEIGHT,
-            SDL_WINDOW_SHOWN);
+            SDL_WINDOW_ALLOW_HIGHDPI);
 
     assert(context.window);
 
@@ -216,7 +216,7 @@ int main()
             SCREEN_WIDTH, SCREEN_HEIGHT);
     
     context.pos = (struct vector2f_t) { 2.0f, 2.0f };
-    context.dir = norm((struct vector2f_t) { -1.0f, 0.1f });
+    context.dir = norm((struct vector2f_t) { 1.0f, 1.0f });
     context.plane = (struct vector2f_t) { 0.0f, 0.66f };
     context.delta_time = 0.0f;
 
