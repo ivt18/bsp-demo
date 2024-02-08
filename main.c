@@ -4,12 +4,13 @@
 #include <assert.h>
 #include <SDL2/SDL.h>
 
+#define FPS_INTERVAL 1.0f // seconds
+
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
 
 #define SCREEN_WIDTH 384
 #define SCREEN_HEIGHT 216
-#define ASPECT_RATIO 0.66
 
 #define MAP_WIDTH 8
 #define MAP_HEIGHT 8
@@ -18,13 +19,20 @@
 #define COLOR_CEILING 0x505050FF
 #define COLOR_DARKER_FACTOR 0xA0
 
-#define min(a, b) ({ __typeof__(a) _a = (a), _b = (b); _a < _b ? _a : _b; })
-#define max(a, b) ({ __typeof__(a) _a = (a), _b = (b); _a > _b ? _a : _b; })
-#define sign(a) ({                                       \
-        __typeof__(a) _a = (a);                          \
-        (__typeof__(a))(_a < 0 ? -1 : (_a > 0 ? 1 : 0)); \
-    })
+static inline float min(const float a, const float b)
+{
+    return (a < b) ? a : b;
+}
 
+static inline float max(const float a, const float b)
+{
+    return (a > b) ? a : b;
+}
+
+static inline int32_t sign(const float a)
+{
+    return a < 0 ? -1 : (a > 0 ? 1 : 0);
+}
 
 struct vector2f_t { float x, y; };
 struct vector2i_t { int32_t x, y; };
@@ -56,6 +64,9 @@ struct {
     bool quit;
 
     struct vector2f_t pos, dir, plane;
+
+    uint32_t frame_start, frame_end, frame_time, frame_count;
+    float delta_time, fps;
 } context;
 
 struct {
@@ -63,13 +74,13 @@ struct {
     struct vector2f_t pos;
 } hit;
 
-const static uint8_t MAP[MAP_WIDTH * MAP_HEIGHT] = {
+static const uint8_t MAP[MAP_WIDTH * MAP_HEIGHT] = {
     1, 1, 1, 1, 1, 1, 1, 1,
     1, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 2, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 3, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 4, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 1,
     1, 1, 1, 1, 1, 1, 1, 1,
 };
@@ -138,17 +149,22 @@ void render()
 
         uint32_t color;
         switch (hit.val) {
-            case 1: color = 0xFF0000FF; break;
+            case 1: color = 0xF0F0F0FF; break;
+            case 2: color = 0xFF0000FF; break;
+            case 3: color = 0x00FF00FF; break;
+            case 4: color = 0x0000FFFF; break;
+            default: color = 0; break;
         }
 
-        if (hit.side == 1) {
+        // darken walls depending on perspective
+        /* if (hit.side == 1) {
             const uint32_t
                 r = ((color & 0xFF000000) * COLOR_DARKER_FACTOR),
                 g = ((color & 0x00FF0000) * COLOR_DARKER_FACTOR),
                 b = ((color & 0x0000FF00) * COLOR_DARKER_FACTOR);
 
             color = 0x000000FF | (r & 0xFF000000) | (g & 0x00FF0000) | (b & 0x0000FF00);
-        }
+        } */
 
         hit.pos = (struct vector2f_t) { ray_pos.x + side_dist.x, ray_pos.y + side_dist.y };
 
@@ -160,10 +176,10 @@ void render()
 
         const int32_t
             h = (int32_t) (SCREEN_HEIGHT / dist_perp),
-            y0 = max((SCREEN_HEIGHT / 2) - (h / 2), 0), // upper line end
-            y1 = min((SCREEN_HEIGHT / 2) + (h / 2), SCREEN_HEIGHT - 1); // lower line end
+            y0 = max((SCREEN_HEIGHT / 2.0f) - (h / 2.0f), 0.0f), // upper line end
+            y1 = min((SCREEN_HEIGHT / 2.0f) + (h / 2.0f), SCREEN_HEIGHT - 1.0f); // lower line end
 
-        v_line(x, 0, y0, COLOR_CEILING);
+        v_line(x, 0.0f, y0, COLOR_CEILING);
         v_line(x, y0, y1, color);
         v_line(x, y1, SCREEN_HEIGHT - 1, COLOR_FLOOR);
     }
@@ -199,14 +215,17 @@ int main()
             SDL_TEXTUREACCESS_STREAMING,
             SCREEN_WIDTH, SCREEN_HEIGHT);
     
-    context.pos = (struct vector2f_t) { 4.0f, 4.0f };
-    context.dir = norm((struct vector2f_t) { 1.0f, 1.0f });
-    context.plane = (struct vector2f_t) { 0.0f, ASPECT_RATIO };
+    context.pos = (struct vector2f_t) { 2.0f, 2.0f };
+    context.dir = norm((struct vector2f_t) { -1.0f, 0.1f });
+    context.plane = (struct vector2f_t) { 0.0f, 0.66f };
+    context.delta_time = 0.0f;
 
     const float move_speed = 3.0f * 0.016f;
     const float rot_speed = 3.0f * 0.016f;
 
     while (!context.quit) {
+        context.frame_start = SDL_GetTicks();
+
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
             switch (ev.type) {
@@ -240,6 +259,18 @@ int main()
         SDL_UpdateTexture(context.texture, NULL, context.pixels, SCREEN_WIDTH * 4); // 4 == sizeof(uint32_t)
         SDL_RenderCopy(context.renderer, context.texture, NULL, NULL);
         SDL_RenderPresent(context.renderer);
+
+        context.frame_end = SDL_GetTicks();
+        context.frame_time = context.frame_end - context.frame_start;
+        context.delta_time += context.frame_time / 1000.0f;
+        context.frame_count++;
+        
+        if (context.delta_time > FPS_INTERVAL) {
+            context.fps = context.frame_count / context.delta_time;
+            printf("FPS: %0.2f\n", context.fps);
+            context.frame_count = 0;
+            context.delta_time = 0.0f;
+        }
     }
 
     SDL_DestroyTexture(context.texture);
