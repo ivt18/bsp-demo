@@ -92,6 +92,19 @@ static void v_line(int32_t x, int32_t y0, int32_t y1, uint32_t color)
     }
 }
 
+static uint32_t rgba_shading(const uint32_t color, const uint8_t shading)
+{
+    uint8_t r = (color >> 24) & 0xFF;
+    r -= min(shading, r);
+    uint8_t g = (color >> 16) & 0xFF;
+    g -= min(shading, g);
+    uint8_t b = (color >> 8)  & 0xFF;
+    b -= min(shading, b);
+
+    uint32_t result = 0x000000FF | ((r << 24) & 0xFF000000) | ((g << 16) & 0x00FF0000) | ((b << 8) & 0x0000FF00);
+    return result;
+}
+
 void render()
 {
     for (uint32_t x = 0; x < SCREEN_WIDTH; ++x) {
@@ -156,12 +169,7 @@ void render()
 
         // darken walls depending on perspective
         if (hit.side == 1) {
-            const uint32_t
-                r = ((color & 0xFF000000) * COLOR_DARKER_FACTOR),
-                g = ((color & 0x00FF0000) * COLOR_DARKER_FACTOR),
-                b = ((color & 0x0000FF00) * COLOR_DARKER_FACTOR);
-
-            color = 0x000000FF | (r & 0xFF000000) | (g & 0x00FF0000) | (b & 0x0000FF00);
+            color = rgba_shading(color, 40);
         }
 
         hit.pos = (struct vector2f_t) { ray_pos.x + side_dist.x, ray_pos.y + side_dist.y };
