@@ -96,15 +96,13 @@ void render()
 {
     for (uint32_t x = 0; x < SCREEN_WIDTH; ++x) {
         // ray position
-        const struct vector2f_t ray_pos = {
-            context.pos.x, context.pos.y
-        };
+        const struct vector2f_t ray_pos = context.pos;
 
         // ray direction
-        float correction = -1 + 2 * (x / (float)SCREEN_WIDTH);
+        float x_cam = (2 * (x / (float) (SCREEN_WIDTH))) - 1;
         const struct vector2f_t ray_dir = {
-            context.dir.x + context.plane.x * correction,
-            context.dir.y + context.plane.y * correction
+            context.dir.x + context.plane.x * x_cam,
+            context.dir.y + context.plane.y * x_cam
         };
 
         // integer position in map
@@ -208,7 +206,6 @@ int main()
 
     uint32_t render_flags = SDL_RENDERER_PRESENTVSYNC;
     context.renderer = SDL_CreateRenderer(context.window, -1, render_flags);
-    SDL_SetRenderDrawBlendMode(context.renderer, SDL_BLENDMODE_BLEND);
 
     context.texture = SDL_CreateTexture(context.renderer,
             SDL_PIXELFORMAT_RGBA8888,
@@ -216,7 +213,7 @@ int main()
             SCREEN_WIDTH, SCREEN_HEIGHT);
     
     context.pos = (struct vector2f_t) { 2.0f, 2.0f };
-    context.dir = norm((struct vector2f_t) { 1.0f, 1.0f });
+    context.dir = norm((struct vector2f_t) { 1.0f, -0.1f });
     context.plane = (struct vector2f_t) { 0.0f, 0.66f };
     context.delta_time = 0.0f;
 
