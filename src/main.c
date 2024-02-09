@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <SDL2/SDL.h>
 
+#include "vector.h"
+
 #define FPS_INTERVAL 1.0f // seconds
 
 #define WINDOW_WIDTH 1280
@@ -32,28 +34,6 @@ static inline float max(const float a, const float b)
 static inline int32_t sign(const float a)
 {
     return a < 0 ? -1 : (a > 0 ? 1 : 0);
-}
-
-struct vector2f_t { float x, y; };
-struct vector2i_t { int32_t x, y; };
-
-static inline float dot(const struct vector2f_t v, const struct vector2f_t u)
-{
-    return (v.x * u.x) + (v.y * u.y);
-}
-
-static inline float len(const struct vector2f_t v)
-{
-    return sqrtf(dot(v, v));
-}
-
-static inline struct vector2f_t norm(const struct vector2f_t v)
-{
-    struct vector2f_t u;
-    float l = len(v);
-    u.x = v.x / l;
-    u.y = v.y / l;
-    return u;
 }
 
 struct {
