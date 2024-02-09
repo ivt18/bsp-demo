@@ -14,12 +14,15 @@
 #define SCREEN_WIDTH 384
 #define SCREEN_HEIGHT 216
 
-#define MAP_WIDTH 8
-#define MAP_HEIGHT 8
+#define COLOR_WHITE 0xFFFFFFFF
+#define COLOR_RED   0xFF0000FF
+#define COLOR_GREEN 0x00FF00FF
+#define COLOR_BLUE  0x0000FFFF
 
-#define COLOR_FLOOR 0x202020FF
-#define COLOR_CEILING 0x505050FF
-#define COLOR_DARKER_FACTOR 0xA0
+#define RADIUS_PlAYER 1.5f
+#define COLOR_PLAYER COLOR_RED
+
+#define COLOR_VERTEX COLOR_BLUE
 
 static inline float min(const float a, const float b)
 {
@@ -43,141 +46,85 @@ struct {
     uint32_t pixels[SCREEN_WIDTH * SCREEN_HEIGHT];
     bool quit;
 
-    struct vector2f_t pos, dir, plane;
+    struct vector2f_t pos, dir;
 
     uint32_t frame_start, frame_end, frame_time, frame_count;
     float delta_time, fps;
 } context;
 
-struct {
-    int32_t val, side;
-    struct vector2f_t pos;
-} hit;
-
-static const uint8_t MAP[MAP_WIDTH * MAP_HEIGHT] = {
-    1, 1, 1, 1, 1, 1, 1, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 2, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 3, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 4, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 1, 1, 1, 1, 1, 1, 1,
-};
-
-static void v_line(int32_t x, int32_t y0, int32_t y1, uint32_t color)
+static void rotate(const float deg)
 {
-    for (int y = y0; y < y1; ++y) {
+    const struct vector2f_t d = context.dir;
+    context.dir.x = d.x * cos(deg) - d.y * sin(deg);
+    context.dir.y = d.x * sin(deg) + d.y * cos(deg);
+}
+
+static void v_line(uint32_t x, uint32_t y0, uint32_t y1, uint32_t color)
+{
+    for (uint32_t y = y0; y < y1; ++y) {
         context.pixels[y * SCREEN_WIDTH + x] = color;
     }
 }
 
-static uint32_t rgba_shading(const uint32_t color, const uint8_t shading)
+static void draw_square_2d(const struct vector2f_t pos, const float radius, const uint32_t color)
 {
-    uint8_t r = (color >> 24) & 0xFF;
-    r -= min(shading, r);
-    uint8_t g = (color >> 16) & 0xFF;
-    g -= min(shading, g);
-    uint8_t b = (color >> 8)  & 0xFF;
-    b -= min(shading, b);
+    const struct vector2i_t blc = {
+        (uint32_t) (pos.x - min(pos.x, radius)),
+        (uint32_t) (pos.y - min(pos.y, radius))
+    }; // bottom left corner
+    const struct vector2f_t trc = {
+        (uint32_t) (pos.x + min(SCREEN_WIDTH - pos.x, radius)),
+        (uint32_t) (pos.y + min(SCREEN_HEIGHT - pos.y, radius))
+    }; // top right corner
 
-    uint32_t result = 0x000000FF | ((r << 24) & 0xFF000000) | ((g << 16) & 0x00FF0000) | ((b << 8) & 0x0000FF00);
-    return result;
-}
-
-void render()
-{
-    for (uint32_t x = 0; x < SCREEN_WIDTH; ++x) {
-        // ray position
-        const struct vector2f_t ray_pos = context.pos;
-
-        // ray direction
-        float x_cam = (2 * (x / (float) (SCREEN_WIDTH))) - 1;
-        const struct vector2f_t ray_dir = {
-            context.dir.x + context.plane.x * x_cam,
-            context.dir.y + context.plane.y * x_cam
-        };
-
-        // integer position in map
-        struct vector2i_t ray_ipos = { (int32_t) ray_pos.x, (int32_t) ray_pos.y };
-
-        // length of ray cast
-        const struct vector2f_t delta_dist = {
-            fabsf(1.0f / ray_dir.x),
-            fabsf(1.0f / ray_dir.y)
-        };
-
-        // length of ray from current pos to first x/y side
-        struct vector2f_t side_dist = {
-            delta_dist.x * (ray_dir.x < 0 ? (ray_pos.x - ray_ipos.x) : (ray_ipos.x + 1.0f - ray_pos.x)),
-            delta_dist.y * (ray_dir.y < 0 ? (ray_pos.y - ray_ipos.y) : (ray_ipos.y + 1.0f - ray_pos.y))
-        };
-
-        // direction to step in each axis
-        struct vector2i_t step = {
-            (int32_t) sign(ray_dir.x), (int32_t) sign(ray_dir.y)
-        };
-
-        hit.val = 0;
-        while (!hit.val) {
-            if (side_dist.x < side_dist.y) {
-                side_dist.x += delta_dist.x;
-                ray_ipos.x += step.x;
-                hit.side = 0;
-            } else {
-                side_dist.y += delta_dist.y;
-                ray_ipos.y += step.y;
-                hit.side = 1;
-            }
-
-            assert(ray_ipos.x >= 0 &&
-                    ray_ipos.x < MAP_WIDTH &&
-                    ray_ipos.y >= 0 &&
-                    ray_ipos.y < MAP_HEIGHT);
-
-            hit.val = MAP[ray_ipos.y * MAP_WIDTH + ray_ipos.x];
+    uint32_t x, y;
+    for (x = blc.x; x < trc.x; ++x) {
+        for (y = blc.y; y < trc.y; ++y) {
+            context.pixels[y * SCREEN_WIDTH + x] = color;
         }
-
-        uint32_t color;
-        switch (hit.val) {
-            case 1: color = 0xF0F0F0FF; break;
-            case 2: color = 0xFF0000FF; break;
-            case 3: color = 0x00FF00FF; break;
-            case 4: color = 0x0000FFFF; break;
-            default: color = 0; break;
-        }
-
-        // darken walls depending on perspective
-        if (hit.side == 1) {
-            color = rgba_shading(color, 40);
-        }
-
-        hit.pos = (struct vector2f_t) { ray_pos.x + side_dist.x, ray_pos.y + side_dist.y };
-
-        // distance to the wall we hit
-        const float dist_perp = 
-            hit.side == 0 ?
-            (side_dist.x - delta_dist.x) :
-            (side_dist.y - delta_dist.y);
-
-        const int32_t
-            h = (int32_t) (SCREEN_HEIGHT / dist_perp),
-            y0 = max((SCREEN_HEIGHT / 2.0f) - (h / 2.0f), 0.0f), // upper line end
-            y1 = min((SCREEN_HEIGHT / 2.0f) + (h / 2.0f), SCREEN_HEIGHT - 1.0f); // lower line end
-
-        v_line(x, 0.0f, y0, COLOR_CEILING);
-        v_line(x, y0, y1, color);
-        v_line(x, y1, SCREEN_HEIGHT - 1, COLOR_FLOOR);
     }
 }
 
-static void rotate(const float deg)
+/**
+ * Draw a 2D line segment from point u to point v.
+ */
+static void draw_line_2d(const struct vector2i_t u, const struct vector2i_t v, const uint32_t color)
 {
-    const struct vector2f_t p = context.plane, d = context.dir;
-    context.dir.x = d.x * cos(deg) - d.y * sin(deg);
-    context.dir.y = d.x * sin(deg) + d.y * cos(deg);
-    context.plane.x = p.x * cos(deg) - p.y * sin(deg);
-    context.plane.y = p.x * sin(deg) + p.y * cos(deg);
+    int32_t dx = abs(v.x - u.x);
+    int32_t dy = abs(v.y - u.y);
+    int32_t sx = (dx < 0) ? -1 : 1;
+    int32_t sy = (dy < 0) ? -1 : 1;
+    int32_t err = dx - dy;
+
+    int32_t x = u.x, y = u.y;
+    int32_t err2;
+
+    while ((x != v.x || y != v.y) && x >= 0 && y >= 0 && x < SCREEN_WIDTH && y < SCREEN_HEIGHT) {
+        context.pixels[SCREEN_WIDTH * y + x] = color;
+        
+        err2 = 2 * err;
+        if (err2 > -dy) {
+            err -= dy;
+            x += sx;
+        }
+        if (err2 < dx) {
+            err += dx;
+            y += sy;
+        }
+    }
+    context.pixels[SCREEN_WIDTH * v.y + v.x] = color;
+}
+
+static void draw_player_2d()
+{
+    draw_square_2d(context.pos, RADIUS_PlAYER, COLOR_PLAYER);
+    struct vector2i_t t = { (int32_t) (context.pos.x + 3 * context.dir.x), (int32_t) (context.pos.y + 3 * context.dir.y) };
+    context.pixels[SCREEN_WIDTH * t.y + t.x] = COLOR_WHITE;
+}
+
+static void render_2d()
+{
+    draw_player_2d();
 }
 
 int main()
@@ -199,13 +146,12 @@ int main()
             SDL_PIXELFORMAT_RGBA8888,
             SDL_TEXTUREACCESS_STREAMING,
             SCREEN_WIDTH, SCREEN_HEIGHT);
-    
-    context.pos = (struct vector2f_t) { 2.0f, 2.0f };
+
+    context.pos = (struct vector2f_t) { 100.0f, 100.0f };
     context.dir = norm((struct vector2f_t) { 1.0f, -0.1f });
-    context.plane = (struct vector2f_t) { 0.0f, 0.66f };
     context.delta_time = 0.0f;
 
-    const float move_speed = 3.0f * 0.016f;
+    const float move_speed = 3.0f;
     const float rot_speed = 3.0f * 0.016f;
 
     while (!context.quit) {
@@ -232,24 +178,25 @@ int main()
         }
 
         if (keystate[SDL_SCANCODE_A]) {
-            rotate(-rot_speed);
+            rotate(+rot_speed);
         }
         
         if (keystate[SDL_SCANCODE_D]) {
-            rotate(+rot_speed);
+            rotate(-rot_speed);
         }
 
-        render();
+        memset(context.pixels, 0, sizeof(context.pixels)); // clear what was previously drawn
+        render_2d();
 
         SDL_UpdateTexture(context.texture, NULL, context.pixels, SCREEN_WIDTH * 4); // 4 == sizeof(uint32_t)
-        SDL_RenderCopy(context.renderer, context.texture, NULL, NULL);
+        SDL_RenderCopyEx(context.renderer, context.texture, NULL, NULL, 0.0, NULL, SDL_FLIP_VERTICAL); // flip vertically
         SDL_RenderPresent(context.renderer);
 
         context.frame_end = SDL_GetTicks();
         context.frame_time = context.frame_end - context.frame_start;
         context.delta_time += context.frame_time / 1000.0f;
         context.frame_count++;
-        
+
         if (context.delta_time > FPS_INTERVAL) {
             context.fps = context.frame_count / context.delta_time;
             printf("FPS: %0.2f\n", context.fps);

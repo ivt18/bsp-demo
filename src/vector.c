@@ -19,3 +19,9 @@ struct vector2f_t norm(const struct vector2f_t v)
     u.y = v.y / l;
     return u;
 }
+
+struct vector2i_t vector2f_to_vector2i(const struct vector2f_t v)
+{
+    struct vector2i_t vi = { (int32_t) v.x, (int32_t) v.y };
+    return vi;
+}
