@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <math.h>
 #include <SDL2/SDL.h>
 
 #include "vector.h"
@@ -156,7 +157,7 @@ static void render_2d()
     draw_player_2d();
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     assert(SDL_Init(SDL_INIT_VIDEO) == 0);
 
