@@ -53,6 +53,7 @@ struct {
     struct vector2f_t pos, dir;
 
     uint32_t frame_start, frame_end, frame_time, frame_count;
+    uint64_t time_now, time_last;
     float delta_time, fps;
 } context;
 
@@ -69,8 +70,8 @@ struct {
 static void rotate(const float deg)
 {
     const struct vector2f_t d = context.dir;
-    context.dir.x = d.x * cos(deg) - d.y * sin(deg);
-    context.dir.y = d.x * sin(deg) + d.y * cos(deg);
+    context.dir.x = d.x * cos(deg * context.frame_time) - d.y * sin(deg * context.frame_time);
+    context.dir.y = d.x * sin(deg * context.frame_time) + d.y * cos(deg * context.frame_time);
 }
 
 static void v_line(uint32_t x, uint32_t y0, uint32_t y1, uint32_t color)
@@ -181,8 +182,8 @@ int main(int argc, char *argv[])
     context.dir = norm((struct vector2f_t) { 1.0f, -0.1f });
     context.delta_time = 0.0f;
 
-    const float move_speed = 3.0f;
-    const float rot_speed = 3.0f * 0.016f;
+    const float move_speed = 5.0f * 0.016f;
+    const float rot_speed = 3.0f * 0.0026f;
 
     map.n_vertices = 4;
     map.n_linedefs = 4;
@@ -209,13 +210,13 @@ int main(int argc, char *argv[])
 
         const uint8_t *keystate = SDL_GetKeyboardState(NULL);
         if (keystate[SDL_SCANCODE_W]) {
-            context.pos.x += context.dir.x * move_speed;
-            context.pos.y += context.dir.y * move_speed;
+            context.pos.x += context.dir.x * move_speed * context.frame_time;
+            context.pos.y += context.dir.y * move_speed * context.frame_time;
         }
 
         if (keystate[SDL_SCANCODE_S]) {
-            context.pos.x -= context.dir.x * move_speed;
-            context.pos.y -= context.dir.y * move_speed;
+            context.pos.x -= context.dir.x * move_speed * context.frame_time;
+            context.pos.y -= context.dir.y * move_speed * context.frame_time;
         }
 
         if (keystate[SDL_SCANCODE_A]) {
@@ -233,6 +234,8 @@ int main(int argc, char *argv[])
         SDL_RenderCopyEx(context.renderer, context.texture, NULL, NULL, 0.0, NULL, SDL_FLIP_VERTICAL); // flip vertically
         SDL_RenderPresent(context.renderer);
 
+        context.time_last = context.time_now;
+        context.time_now = SDL_GetPerformanceCounter();
         context.frame_end = SDL_GetTicks();
         context.frame_time = context.frame_end - context.frame_start;
         context.delta_time += context.frame_time / 1000.0f;
