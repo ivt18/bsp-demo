@@ -6,6 +6,7 @@
 #include <SDL2/SDL.h>
 
 #include "vector.h"
+#include "bsp-tree.h"
 
 #define FPS_INTERVAL 1.0f // seconds
 

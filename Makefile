@@ -35,7 +35,7 @@ endif
 
 BIN := bin
 # SRC := $(shell find src -name "*.c")
-SRC := src/main.c src/vector.c
+SRC := src/main.c src/vector.c src/bsp-tree.c
 OBJ := $(SRC:%.c=$(BIN)/%.o)
 
 ifdef OS
