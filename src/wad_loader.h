@@ -10,18 +10,18 @@ struct wad_data {
     size_t sz;
 };
 
-/* Header */
+/* Header. */
 struct wad_header {
     char wad_type[5];
     uint32_t num_directories;
     uint32_t listing_offset;
 };
 
-/* Directories */
+/* Directory. */
 struct wad_directory {
     uint32_t lump_offset;
     uint32_t lump_size;
-    char lump_name[8];
+    char lump_name[9];
 };
 
 /**
@@ -61,5 +61,7 @@ bool read_wad_uint32(const struct wad_data *data, uint32_t *dst, size_t offset);
  * @returns 0 on success, 1 on failure.
  */
 bool load_header(const struct wad_data* data, struct wad_header* header);
+
+bool load_directory(const struct wad_data* data, struct wad_directory* directory, size_t offset);
 
 #endif // WAD_LOADER_H

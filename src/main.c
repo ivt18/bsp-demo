@@ -227,6 +227,12 @@ int main(int argc, char *argv[])
         return 1;
     printf("%s\n%u\n%u\n",
         header.wad_type, header.num_directories, header.listing_offset);
+
+    struct wad_directory directory;
+    load_directory(&data, &directory, header.listing_offset);
+    printf("%s\n%u\n%u\n",
+        directory.lump_name, directory.lump_offset, directory.lump_size);
+
     free(data.data);
 
     while (!context.quit) {

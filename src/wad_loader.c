@@ -152,3 +152,39 @@ bool load_header(const struct wad_data* data, struct wad_header* header)
 
     return 0;
 }
+
+bool load_directory(const struct wad_data* data, struct wad_directory* directory, size_t offset)
+{
+    /* Check for null pointers. */
+    if (!data || !data->data) {
+        fprintf(stderr, "Cannot load header from unloaded WAD or null pointer.\n");
+        return 1;
+    }
+    if (!directory) {
+        fprintf(stderr, "Cannot load directory into null pointer.\n");
+        return 1;
+    }
+
+    /* Read offset of lump. */
+    if (read_wad_uint32(data, &directory->lump_offset, offset)) {
+        fprintf(stderr, "Could not read lump offset for directory.\n");
+        return 1;
+    }
+
+    /* Read size of lump. */
+    if (read_wad_uint32(data, &directory->lump_size, offset + 4)) {
+        fprintf(stderr, "Could not read lump size for directory.\n");
+        return 1;
+    }
+
+    /* Read name of lump. */
+    for (size_t i = 0; i < 8; i++) {
+        if (read_wad_uint8(data, (uint8_t *)directory->lump_name + i, offset + 8 + i)) {
+            fprintf(stderr, "Could not read lump name.\n");
+            return 1;
+        }
+    }
+    directory->lump_name[8] = '\0';
+
+    return 0;
+}
