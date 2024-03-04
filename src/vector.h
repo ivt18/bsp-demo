@@ -3,15 +3,15 @@
 
 #include <stdint.h>
 
-struct vector2f_t { float x, y; };
-struct vector2i_t { int32_t x, y; };
+typedef struct { float x, y; } vector2f_t;
+typedef struct { int32_t x, y; } vector2i_t;
 
-float dot(const struct vector2f_t v, const struct vector2f_t u);
+float dot(const vector2f_t v, const vector2f_t u);
 
-float len(const struct vector2f_t v);
+float len(const vector2f_t v);
 
-struct vector2f_t norm(const struct vector2f_t v);
+vector2f_t norm(const vector2f_t v);
 
-struct vector2i_t vector2f_to_vector2i(const struct vector2f_t v);
+vector2i_t vector2f_to_vector2i(const vector2f_t v);
 
 #endif // VECTOR_H

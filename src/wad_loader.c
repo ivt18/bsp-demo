@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool load_wad(const char *wad_path, struct wad_data *data)
+bool load_wad(const char *wad_path, wad_data *data)
 {
     FILE *fptr;
     size_t bytes_read;
@@ -55,7 +55,7 @@ exit_load:
     return ret;
 }
 
-bool read_wad_uint8(const struct wad_data *data, uint8_t *dst, size_t offset)
+bool read_wad_uint8(const wad_data *data, uint8_t *dst, size_t offset)
 {
     /* Check for null pointers. */
     if (!data || !data->data) {
@@ -79,7 +79,7 @@ bool read_wad_uint8(const struct wad_data *data, uint8_t *dst, size_t offset)
     return 0;
 }
 
-bool read_wad_uint32(const struct wad_data *data, uint32_t *dst, size_t offset)
+bool read_wad_uint32(const wad_data *data, uint32_t *dst, size_t offset)
 {
     /* Check for null pointers. */
     if (!data || !data->data) {
@@ -103,7 +103,7 @@ bool read_wad_uint32(const struct wad_data *data, uint32_t *dst, size_t offset)
     return 0;
 }
 
-bool load_header(const struct wad_data* data, struct wad_header* header)
+bool load_header(const wad_data* data, wad_header* header)
 {
     /* Check for null pointers. */
     if (!data || !data->data) {
@@ -153,7 +153,7 @@ bool load_header(const struct wad_data* data, struct wad_header* header)
     return 0;
 }
 
-bool load_directory(const struct wad_data* data, struct wad_directory* directory, size_t offset)
+bool load_directory(const wad_data* data, wad_directory* directory, size_t offset)
 {
     /* Check for null pointers. */
     if (!data || !data->data) {

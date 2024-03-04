@@ -6,8 +6,8 @@
 #include "vector.h"
 
 struct box {
-    struct vector2i_t top_left;
-    struct vector2i_t bottom_right;
+    vector2i_t top_left;
+    vector2i_t bottom_right;
 };
 
 struct bsp_node {
@@ -20,12 +20,12 @@ struct bsp_node {
     /**
      * Starting coordinate of the splitter vector.
      */
-    struct vector2i_t splitter_start;
+    vector2i_t splitter_start;
 
     /**
      * Direction and magnitude of the splitter vector.
      */
-    struct vector2i_t splitter_delta;
+    vector2i_t splitter_delta;
 
     /**
      * Bounding box to the left of the splitter, when

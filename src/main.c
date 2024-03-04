@@ -55,26 +55,26 @@ struct {
     uint32_t pixels[SCREEN_WIDTH * SCREEN_HEIGHT];
     bool quit;
 
-    struct vector2f_t pos, dir;
+    vector2f_t pos, dir;
 
     uint32_t frame_start, frame_end, frame_time, frame_count;
     uint64_t time_now, time_last;
     float delta_time, fps;
 } context;
 
-struct linedef {
+typedef struct {
     uint8_t start, end;     // start and end vertices
-};
+} linedef;
 
 struct {
     uint8_t n_vertices, n_linedefs;
-    struct vector2i_t vertices[255];
-    struct linedef linedefs[255];
+    vector2i_t vertices[255];
+    linedef linedefs[255];
 } map;
 
 static void rotate(const float deg)
 {
-    const struct vector2f_t d = context.dir;
+    const vector2f_t d = context.dir;
     context.dir.x = d.x * cos(deg * context.frame_time) - d.y * sin(deg * context.frame_time);
     context.dir.y = d.x * sin(deg * context.frame_time) + d.y * cos(deg * context.frame_time);
 }
@@ -107,13 +107,13 @@ static void v_line(uint32_t x, uint32_t y0, uint32_t y1, uint32_t color)
     }
 }
 
-static void draw_square_2d(const struct vector2f_t pos, const float radius, const uint32_t color)
+static void draw_square_2d(const vector2f_t pos, const float radius, const uint32_t color)
 {
-    const struct vector2i_t blc = {
+    const vector2i_t blc = {
         (uint32_t) (pos.x - min(pos.x, radius)),
         (uint32_t) (pos.y - min(pos.y, radius))
     }; // bottom left corner
-    const struct vector2f_t trc = {
+    const vector2f_t trc = {
         (uint32_t) (pos.x + min(SCREEN_WIDTH - pos.x, radius)),
         (uint32_t) (pos.y + min(SCREEN_HEIGHT - pos.y, radius))
     }; // top right corner
@@ -129,7 +129,7 @@ static void draw_square_2d(const struct vector2f_t pos, const float radius, cons
 /**
  * Draw a 2D line segment from point u to point v.
  */
-static void draw_line_2d(const struct vector2i_t u, const struct vector2i_t v, const uint32_t color)
+static void draw_line_2d(const vector2i_t u, const vector2i_t v, const uint32_t color)
 {
     const int32_t dx = abs(v.x - u.x);
     const int32_t dy = abs(v.y - u.y);
@@ -159,7 +159,7 @@ static void draw_line_2d(const struct vector2i_t u, const struct vector2i_t v, c
 static void draw_player_2d()
 {
     draw_square_2d(context.pos, RADIUS_PlAYER, COLOR_PLAYER);
-    struct vector2i_t t = { (int32_t) (context.pos.x + 3 * context.dir.x), (int32_t) (context.pos.y + 3 * context.dir.y) };
+    vector2i_t t = { (int32_t) (context.pos.x + 3 * context.dir.x), (int32_t) (context.pos.y + 3 * context.dir.y) };
     context.pixels[SCREEN_WIDTH * t.y + t.x] = COLOR_WHITE;
 }
 
@@ -204,23 +204,24 @@ int main(int argc, char *argv[])
             SDL_TEXTUREACCESS_STREAMING,
             SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    context.pos = (struct vector2f_t) { 100.0f, 100.0f };
-    context.dir = norm((struct vector2f_t) { 1.0f, -0.1f });
+    context.pos = (vector2f_t) { 100.0f, 100.0f };
+    context.dir = norm((vector2f_t) { 1.0f, -0.1f });
     context.delta_time = 0.0f;
 
     map.n_vertices = 4;
     map.n_linedefs = 4;
-    map.vertices[0] = (struct vector2i_t) { 100, 100 };
-    map.vertices[1] = (struct vector2i_t) { 100, 200 };
-    map.vertices[2] = (struct vector2i_t) { 200, 200 };
-    map.vertices[3] = (struct vector2i_t) { 200, 100 };
-    map.linedefs[0] = (struct linedef) { 0, 1 };
-    map.linedefs[1] = (struct linedef) { 1, 2 };
-    map.linedefs[2] = (struct linedef) { 2, 3 };
-    map.linedefs[3] = (struct linedef) { 3, 0 };
+    map.vertices[0] = (vector2i_t) { 100, 100 };
+    map.vertices[1] = (vector2i_t) { 100, 200 };
+    map.vertices[2] = (vector2i_t) { 200, 200 };
+    map.vertices[3] = (vector2i_t) { 200, 100 };
+    map.linedefs[0] = (linedef) { 0, 1 };
+    map.linedefs[1] = (linedef) { 1, 2 };
+    map.linedefs[2] = (linedef) { 2, 3 };
+    map.linedefs[3] = (linedef) { 3, 0 };
 
-    struct wad_data data;
-    struct wad_header header;
+    wad_data data;
+    wad_header header;
+    wad_directory directory;
     if (load_wad("C:\\Users\\iliya\\Desktop\\bsp-demo\\e1m1.wad", &data))
         return 1;
     if (load_header(&data, &header))
@@ -228,7 +229,6 @@ int main(int argc, char *argv[])
     printf("%s\n%u\n%u\n",
         header.wad_type, header.num_directories, header.listing_offset);
 
-    struct wad_directory directory;
     load_directory(&data, &directory, header.listing_offset);
     printf("%s\n%u\n%u\n",
         directory.lump_name, directory.lump_offset, directory.lump_size);
