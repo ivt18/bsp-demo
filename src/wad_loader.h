@@ -34,12 +34,32 @@ struct wad_directory {
 bool load_wad(const char *wad_path, struct wad_data *data);
 
 /**
+ * @brief Read one byte from the WAD into another variable.
+ * 
+ * @param data Pointer to loaded WAD.
+ * @param dst Pointer to destination to store byte.
+ * @param offset Offset of byte to load.
+ * @returns 0 on success, 1 on failure.
+ */
+bool read_wad_uint8(const struct wad_data *data, uint8_t *dst, size_t offset);
+
+/**
+ * @brief Read four bytes from the WAD into another variable.
+ * 
+ * @param data Pointer to loaded WAD.
+ * @param dst Pointer to destination to store bytes.
+ * @param offset Offset of bytes to load.
+ * @returns 0 on success, 1 on failure.
+ */
+bool read_wad_uint32(const struct wad_data *data, uint32_t *dst, size_t offset);
+
+/**
  * @brief Load the header of a WAD given the path to the WAD file.
  * 
- * @param wad_path The path to the WAD file.
+ * @param data Pointer to loaded WAD.
  * @param header Pointer where to store the loaded header.
  * @returns 0 on success, 1 on failure.
  */
-bool load_header(const char* wad_path, struct wad_header* header);
+bool load_header(const struct wad_data* data, struct wad_header* header);
 
 #endif // WAD_LOADER_H

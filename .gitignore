@@ -53,3 +53,6 @@ dkms.conf
 
 # Binary files
 bin/
+
+# VSCode config
+.vscode/

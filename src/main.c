@@ -219,13 +219,14 @@ int main(int argc, char *argv[])
     map.linedefs[2] = (struct linedef) { 2, 3 };
     map.linedefs[3] = (struct linedef) { 3, 0 };
 
-    // struct wad_header header;
-    // if (!load_header("C:\\Users\\iliya\\Desktop\\bsp-demo\\e1m1.wad", &header)) {
-    //     printf("%s\n%d\n%d\n",
-    //         header.wad_type, header.num_directories, header.listing_offset);
-    // }
     struct wad_data data;
-    load_wad("C:\\Users\\iliya\\Desktop\\bsp-demo\\e1m1.wad", &data);
+    struct wad_header header;
+    if (load_wad("C:\\Users\\iliya\\Desktop\\bsp-demo\\e1m1.wad", &data))
+        return 1;
+    if (load_header(&data, &header))
+        return 1;
+    printf("%s\n%u\n%u\n",
+        header.wad_type, header.num_directories, header.listing_offset);
     free(data.data);
 
     while (!context.quit) {

@@ -32,7 +32,7 @@ bool load_wad(const char *wad_path, struct wad_data *data)
         goto exit_load;
     }
     data->sz = (size_t)file_size;
-    rewind(fptr);
+    fseek(fptr, 0, SEEK_SET);
 
     /* Allocate memory. */
     data->data = (uint8_t *)malloc(data->sz);
@@ -55,29 +55,79 @@ exit_load:
     return ret;
 }
 
-bool load_header(const char* wad_path, struct wad_header* header)
+bool read_wad_uint8(const struct wad_data *data, uint8_t *dst, size_t offset)
 {
-    FILE *fptr;
-    size_t bytes_read;
-    int32_t ret = 0;
-
-    // TODO: check that it is safe to open wad_path
-    fptr = fopen(wad_path, "rb");
-    if (!fptr) {
-        perror("Failed to open WAD file");
-        ret = 1;
-        goto exit_load_header;
+    /* Check for null pointers. */
+    if (!data || !data->data) {
+        fprintf(stderr, "Cannot load data from unloaded WAD or null pointer.\n");
+        return 1;
+    }
+    if (!dst) {
+        fprintf(stderr, "Cannot load data into null pointer destination.\n");
+        return 1;
     }
 
-    /* Read WAD type. */
-    bytes_read = fread(header->wad_type, sizeof(char), 4, fptr);
-    if (bytes_read != 4) {
-        fprintf(stderr, "Could not read WAD type from WAD file.\n");
-        ret = 1;
-        goto exit_load_header;
+    /* Check that the data we want to load exists. */
+    if (data->sz < offset + 1) {
+        fprintf(stderr, "Cannot load data beyond WAD size.\n");
+        return 1;
     }
 
-    /* Add null terminator to the WAD type. */
+    /* Copy the data. */
+    memcpy(dst, data->data + offset, 1);
+
+    return 0;
+}
+
+bool read_wad_uint32(const struct wad_data *data, uint32_t *dst, size_t offset)
+{
+    /* Check for null pointers. */
+    if (!data || !data->data) {
+        fprintf(stderr, "Cannot load data from unloaded WAD or null pointer.\n");
+        return 1;
+    }
+    if (!dst) {
+        fprintf(stderr, "Cannot load data into null pointer destination.\n");
+        return 1;
+    }
+
+    /* Check that the data we want to load exists. */
+    if (data->sz < offset + 4) {
+        fprintf(stderr, "Cannot load data beyond WAD size.\n");
+        return 1;
+    }
+
+    /* Copy the data. */
+    memcpy(dst, data->data + offset, 4);
+
+    return 0;
+}
+
+bool load_header(const struct wad_data* data, struct wad_header* header)
+{
+    /* Check for null pointers. */
+    if (!data || !data->data) {
+        fprintf(stderr, "Cannot load header from unloaded WAD or null pointer.\n");
+        return 1;
+    }
+    if (!header) {
+        fprintf(stderr, "Cannot load header into null pointer.\n");
+        return 1;
+    }
+
+    /* Check that there is actual data. */
+    if (data->sz < 12) {
+        fprintf(stderr, "WAD file given does not contain a header.\n");
+        return 1;
+    }
+
+    /* Read WAD type and add null terminator. */
+    for (size_t i = 0; i < 4; i++) {
+        if (read_wad_uint8(data, (uint8_t *)header->wad_type + i, i)) {
+            fprintf(stderr, "Could not read WAD type.\n");
+            return 1;
+        }
+    }
     header->wad_type[4] = '\0';
 
     /* Check that it is a valid WAD type. */
@@ -85,27 +135,20 @@ bool load_header(const char* wad_path, struct wad_header* header)
     bool PWAD = strncmp(header->wad_type, "PWAD", 4);
     if (!IWAD && !PWAD) {
         fprintf(stderr, "Invalid WAD type read.\n");
-        ret = 1;
-        goto exit_load_header;
+        return 1;
     }
 
     /* Read number of directories. */
-    bytes_read = fread(&header->num_directories, sizeof(uint32_t), 1, fptr);
-    if (bytes_read != 1) {
-        fprintf(stderr, "Could not read number of directories from WAD file.\n");
-        ret = 1;
-        goto exit_load_header;
+    if (read_wad_uint32(data, &header->num_directories, 4)) {
+        fprintf(stderr, "Could not read number of directories.\n");
+        return 1;
     }
 
     /* Read offset of listing. */
-    bytes_read = fread(&header->listing_offset, sizeof(uint32_t), 1, fptr);
-    if (bytes_read != 1) {
-        fprintf(stderr, "Could not read offset of listing from WAD file.\n");
-        ret = 1;
-        goto exit_load_header;
+    if (read_wad_uint32(data, &header->listing_offset, 8)) {
+        fprintf(stderr, "Could not read offset of listing.\n");
+        return 1;
     }
 
-exit_load_header:
-    fclose(fptr);
-    return ret;
+    return 0;
 }
