@@ -4,6 +4,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/* Data. */
+struct wad_data {
+    uint8_t *data;
+    size_t sz;
+};
+
 /* Header */
 struct wad_header {
     char wad_type[5];
@@ -19,11 +25,20 @@ struct wad_directory {
 };
 
 /**
+ * @brief Load the WAD into memory, given the path to the WAD file.
+ * 
+ * @param wad_path The path to the WAD file.
+ * @param data Pointer where to store the loaded WAD.
+ * @returns 0 on success, 1 on failure.
+ */
+bool load_wad(const char *wad_path, struct wad_data *data);
+
+/**
  * @brief Load the header of a WAD given the path to the WAD file.
  * 
  * @param wad_path The path to the WAD file.
  * @param header Pointer where to store the loaded header.
- * @returns 0 if loading was successful, 1 otherwise.
+ * @returns 0 on success, 1 on failure.
  */
 bool load_header(const char* wad_path, struct wad_header* header);
 
