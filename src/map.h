@@ -2,15 +2,25 @@
 #define MAP_H
 
 #include <stdint.h>
+#include "vector.h"
+#include "wad.h"
 
-typedef struct linedef {
-    uint8_t start, end;     // start and end vertices
-} linedef;
+typedef vector2i_t Vertex;
 
-struct {
+typedef struct {
+    uint16_t start_vertex, end_vertex,
+             flags, line_type, sector_tag,
+             left_side_def, right_side_def;
+} Linedef;
+
+typedef struct {
     uint8_t n_vertices, n_linedefs;
-    struct vector2i_t vertices[255];
-    linedef linedefs[255];
-} map;
+    Vertex vertices[255];
+    Linedef linedefs[255];
+} Map;
+
+bool read_vertex(const WAD* wad, size_t offset, Vertex *vertex);
+
+bool read_linedef(const WAD* wad, size_t offset, Linedef *linedef);
 
 #endif // MAP_H

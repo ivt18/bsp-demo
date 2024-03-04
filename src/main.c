@@ -6,7 +6,8 @@
 #include <SDL2/SDL.h>
 
 #include "vector.h"
-#include "wad_loader.h"
+#include "wad.h"
+#include "map.h"
 // #include "bsp-tree.h"
 
 #define FPS_INTERVAL 1.0f // seconds
@@ -32,6 +33,8 @@
 
 const float MOVE_SPEED = 5.0f * 0.016f;
 const float ROT_SPEED = 3.0f * 0.0026f;
+
+Map map;
 
 static inline float min(const float a, const float b)
 {
@@ -61,16 +64,6 @@ struct {
     uint64_t time_now, time_last;
     float delta_time, fps;
 } context;
-
-typedef struct {
-    uint8_t start, end;     // start and end vertices
-} linedef;
-
-struct {
-    uint8_t n_vertices, n_linedefs;
-    vector2i_t vertices[255];
-    linedef linedefs[255];
-} map;
 
 static void rotate(const float deg)
 {
@@ -166,7 +159,7 @@ static void draw_player_2d()
 static void draw_map_lines_2d()
 {
     for (uint8_t i = 0; i < map.n_linedefs; ++i) {
-        draw_line_2d(map.vertices[map.linedefs[i].start], map.vertices[map.linedefs[i].end], COLOR_MAP_LINES);
+        draw_line_2d(map.vertices[map.linedefs[i].start_vertex], map.vertices[map.linedefs[i].end_vertex], COLOR_MAP_LINES);
     }
 }
 
@@ -214,14 +207,14 @@ int main(int argc, char *argv[])
     map.vertices[1] = (vector2i_t) { 100, 200 };
     map.vertices[2] = (vector2i_t) { 200, 200 };
     map.vertices[3] = (vector2i_t) { 200, 100 };
-    map.linedefs[0] = (linedef) { 0, 1 };
-    map.linedefs[1] = (linedef) { 1, 2 };
-    map.linedefs[2] = (linedef) { 2, 3 };
-    map.linedefs[3] = (linedef) { 3, 0 };
+    map.linedefs[0] = (Linedef) { 0, 1 };
+    map.linedefs[1] = (Linedef) { 1, 2 };
+    map.linedefs[2] = (Linedef) { 2, 3 };
+    map.linedefs[3] = (Linedef) { 3, 0 };
 
-    wad_data data;
-    wad_header header;
-    wad_directory directory;
+    WAD data;
+    Header header;
+    Directory directory;
     if (load_wad("C:\\Users\\iliya\\Desktop\\bsp-demo\\e1m1.wad", &data))
         return 1;
     if (load_header(&data, &header))
